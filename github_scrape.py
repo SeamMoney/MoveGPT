@@ -1,23 +1,70 @@
-import pickle
 import os
-
+import pickle
 from llama_index import (
     download_loader,
     GPTSimpleVectorIndex,
     LLMPredictor,
     ServiceContext,
 )
-
-download_loader("GithubRepositoryReader")
 from llama_index.readers.llamahub_modules.github_repo import (
     GithubClient,
     GithubRepositoryReader,
 )
 from langchain import OpenAI
 
-repos = {
-    "econia": "https://github.com/econia-labs/econia/tree/main/src/move",
-}
+download_loader("GithubRepositoryReader")
+
+repos = [
+    {
+        "owner": "aptos-labs",
+        "repo": "aptos-core",
+        "filter_directories": (
+            ["aptos-move/framework"],
+            GithubRepositoryReader.FilterType.INCLUDE,
+        ),
+        "filter_file_extensions": (
+            [".move"],
+            GithubRepositoryReader.FilterType.INCLUDE,
+        ),
+    },
+    {
+        "owner": "econia-labs",
+        "repo": "econia",
+        "filter_directories": (
+            ["src/move"],
+            GithubRepositoryReader.FilterType.INCLUDE,
+        ),
+        "filter_file_extensions": (
+            [".move", ".md"],
+            GithubRepositoryReader.FilterType.INCLUDE,
+        ),
+    },
+    {
+        "owner": "x24870",
+        "repo": "move_fastly",
+        "filter_directories": (
+            ["bridge", "counter", "message", "nft", "upgrade_counter"],
+            GithubRepositoryReader.FilterType.INCLUDE,
+        ),
+        "filter_file_extensions": (
+            [".move"],
+            GithubRepositoryReader.FilterType.INCLUDE,
+        ),
+    },
+    {
+        "owner": "villesundell",
+        "repo": "move-patterns",
+        "filter_directories": (
+            ["src"],
+            GithubRepositoryReader.FilterType.INCLUDE,
+        ),
+        "filter_file_extensions": (
+            [".md"],
+            GithubRepositoryReader.FilterType.INCLUDE,
+        ),
+    },
+    # Add other repository configurations here
+]
 
 docs = None
 if os.path.exists("docs.pkl"):
@@ -26,95 +73,30 @@ if os.path.exists("docs.pkl"):
 
 if docs is None:
     github_client = GithubClient(os.getenv("GITHUB_TOKEN"))
+    all_docs = []
 
-    aptos_core_loader = GithubRepositoryReader(
-        github_client,
-        owner="aptos-labs",
-        repo="aptos-core",
-        filter_directories=(
-            ["aptos-move/framework"],
-            GithubRepositoryReader.FilterType.INCLUDE,
-        ),
-        filter_file_extensions=([".move"],
-                                GithubRepositoryReader.FilterType.INCLUDE),
-        verbose=True,
-        concurrent_requests=10,
-    )
-
-    econia_loader = GithubRepositoryReader(
-        github_client,
-        owner="econia-labs",
-        repo="econia",
-        filter_directories=(
-            ["src/move"],
-            GithubRepositoryReader.FilterType.INCLUDE,
-        ),
-        filter_file_extensions=([".move", ".md"],
-                                GithubRepositoryReader.FilterType.INCLUDE),
-        verbose=True,
-        concurrent_requests=10,
-    )
-
-    ferum_loader_1 = GithubRepositoryReader(
-        github_client,
-        owner="ferumlabs",
-        repo="ferum-std",
-        filter_directories=(
-            ["sources", "docs"],
-            GithubRepositoryReader.FilterType.INCLUDE,
-        ),
-        filter_file_extensions=([".move", ".md"],
-                                GithubRepositoryReader.FilterType.INCLUDE),
-        verbose=True,
-        concurrent_requests=10,
-    )
-
-    ferum_loader_2 = GithubRepositoryReader(
-        github_client,
-        owner="ferumlabs",
-        repo="ferum",
-        filter_directories=(
-            ["contract"],
-            GithubRepositoryReader.FilterType.INCLUDE,
-        ),
-        filter_file_extensions=([".move", ".md"],
-                                GithubRepositoryReader.FilterType.INCLUDE),
-        verbose=True,
-        concurrent_requests=10,
-    )
-
-    move_book_loader = GithubRepositoryReader(
-        github_client,
-        owner="move-language",
-        repo="move",
-        filter_directories=(
-            [
-                "language/move-stdlib/docs", "language/move-stdlib/sources",
-                "language/move-stdlib/nursery", "language/documentation"
-            ],
-            GithubRepositoryReader.FilterType.INCLUDE,
-        ),
-        filter_file_extensions=([".move", ".md"],
-                                GithubRepositoryReader.FilterType.INCLUDE),
-        verbose=True,
-        concurrent_requests=10,
-    )
-
-    aptos_docs = aptos_core_loader.load_data(branch="main")
-    econia_docs = econia_loader.load_data(branch="main")
-    ferum_docs_1 = ferum_loader_1.load_data(branch="main")
-    ferum_docs_2 = ferum_loader_2.load_data(branch="main")
+    for repo in repos:
+        loader = GithubRepositoryReader(
+            github_client,
+            owner=repo["owner"],
+            repo=repo["repo"],
+            filter_directories=repo["filter_directories"],
+            filter_file_extensions=repo["filter_file_extensions"],
+            verbose=True,
+            concurrent_requests=10,
+        )
+        repo_docs = loader.load_data(branch="main")
+        all_docs.extend(repo_docs)
 
     with open("docs.pkl", "wb") as f:
-        pickle.dump(aptos_docs, f)
-        pickle.dump(econia_docs, f)
+        pickle.dump(all_docs, f)
 
 llm_predictor = LLMPredictor(
-    llm=OpenAI(temperature=0, model_name="text-davinci-003", max_tokens=5000))
+    llm=OpenAI(temperature=0, model_name="text-davinci-003", max_tokens=5000)
+)
 
 service_context = ServiceContext.from_defaults(llm_predictor=llm_predictor)
 
-index = GPTSimpleVectorIndex.from_documents(docs,
-                                            service_context=service_context)
+index = GPTSimpleVectorIndex.from_documents(docs, service_context=service_context)
 
 index.save_to_disk("github-vectorStore")
