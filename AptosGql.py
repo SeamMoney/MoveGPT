@@ -17,9 +17,11 @@ GET_NFTS_OWNER = """
     creator_address
     name
     owner_address
-
   }
 }"""
+
+
+# GET_TX 
 
 # def generic_formatter(query,variables):
 #     for var in variables.keys()

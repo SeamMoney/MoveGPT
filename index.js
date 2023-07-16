@@ -16,14 +16,14 @@ app.get('/', (req, res) => {
 
 app.post('/generate-response', async (req, res) => {
   const { question } = req.body;
-  
+  console.log(`Human: ${question}`);
   const answer = await generateResponse({
     prompt: question,
     history: conversationHistory
   });
 
   conversationHistory.push(`Human: ${question}`, `MoveGPT: ${answer}`);
-
+  console.log(answer);
   res.json({ answer });
 });
 
