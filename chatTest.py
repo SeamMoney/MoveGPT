@@ -20,7 +20,7 @@ tool_specs = [
   {
     'name': 'Move Agent',
     'func': use_moveGPT,
-    'use': 'to give information about move or the aptos blockchain',
+    'use': 'to give information about writing move code or the aptos blockchain when unsure what agent to use use this one',
     'input':'question user has about move or the aptos blockchain'
   },
   # {
@@ -33,7 +33,7 @@ tool_specs = [
   {
     'name': 'Github Chat Agent',
     'func': use_gh,
-    'use': 'to chat with github chat agent about generating move code, Feed output into         Move Agent to refine the code',
+    'use': 'to chat with github chat agent about generating move code, Feed output into  Move Agent to refine the code',
     'input':'question about how to create move code' 
   }
 

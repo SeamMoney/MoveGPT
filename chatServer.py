@@ -62,12 +62,12 @@ def chat():
     user_id = payload['user_id']
     convo_id = payload['convo_id']
     user_input = payload['messages']
-    if len(user_input)>1:
-        agent= conversations[(user_id, convo_id)]
-    else:
-        agent = ChatAgent(tool_kit)
-        conversations[(user_id, convo_id)]= agent
-    response = chat_agent.chat(user_input)
+    # if len(user_input)>1:
+    #     agent= conversations[(user_id, convo_id)]
+    # else:
+    agent = ChatAgent(tool_kit)
+    conversations[(user_id, convo_id)]= agent
+    response = agent.chat(user_input)
     # save_message(user_id, convo_id, user_input, response)
     return response['output']
 

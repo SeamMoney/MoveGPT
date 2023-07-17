@@ -1,7 +1,7 @@
 from AptosToolClient import account_balance, account_transactions, create_kit, use_moveGPT, use_gh
-from AptosGql import AptosGQLTool
+# from AptosGql import AptosGQLTool
 
-aQgl = AptosGQLTool()
+# aQgl = AptosGQLTool()
 
 tool_specs = [
   {
