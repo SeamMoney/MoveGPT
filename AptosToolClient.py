@@ -13,7 +13,9 @@ import pickle
 import os
 import hnswlib
 from llama_index import GPTVectorStoreIndex
+from llama_index import StorageContext
 from llama_index import load_index_from_storage
+import json
 
 NODE_URL = "https://fullnode.mainnet.aptoslabs.com/v1"
 MOVE_URL = "http://localhost:3000/"
@@ -24,8 +26,7 @@ APT_SCALE = 100000000
 tools = []
 # store = hnswlib.load_index("github-vectorStore")
 # vector_store = GPTVectorStoreIndex.from_vector_store(store)
-# vector_store = load_index_from_storage("github-vectorStore")
-
+vector_store = load_index_from_storage(StorageContext.from_defaults(persist_dir="./docStore/"))
 
 
 def format_tool_prompt(tool_name, tool_function, tool_input):
@@ -53,15 +54,18 @@ def create_kit(tool_specs):
     return tools
 
 
-def use_moveGPT(input="what is move"):
+def use_moveGPT(input):
     req = requests.post(MOVE_URL + "generate-response",
                         json={"question": input})
-    return req.json()['answer']
+    answer = req.json().get('answer')
+    res = json.dumps({"answer": answer})  # Wrapping the answer in a dictionary.
+    return res
 
 
 def use_gh(input="what is move"):
-    # q = vector_store.query(input)
-    return input
+    q = vector_store.query(input)
+    res = json.dumps(q)
+    return res
 
 
 # THESE ARE THE FUNCTIONS TO BE USED BY THE TOOLS
@@ -69,6 +73,7 @@ def account_balance(
     input="0x9ee9892d8600ed0bf65173d801ab75204a16ac2c6f190454a3b98f6bcb99d915"
 ):
     res = float(client.account_balance(input)) / APT_SCALE
+    res = json.dumps(res)
     return res
 
 
@@ -105,7 +110,8 @@ def account_transactions(input="0x1"):
                 tx['arguments'] = payload['arguments']
             txs.append(tx)
             # })
-        return txs[:2]
+        res = json.dumps(txs[:2])
+        return res
 
 
 def account_modules(input="0x1"):
