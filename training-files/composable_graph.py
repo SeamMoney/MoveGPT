@@ -1,12 +1,7 @@
 import os
 import logging
 import sys
-from llama_index import VectorStoreIndex, SimpleDirectoryReader, ComposableGraph, SimpleKeywordTableIndex
-from llama_index import ServiceContext, set_global_service_context
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
+from llama_index import TreeIndex, SimpleDirectoryReader, ComposableGraph, StorageContext
 
 # Set up logging
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -14,51 +9,61 @@ logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
 # Load .move and .md documents
 print("Loading documents...")
-base_dir = "/workspaces/MoveGPT/training-files/dapps"
+base_dir = "./dapps"
 move_documents = []
 md_documents = []
 
 for dapp_dir in os.listdir(base_dir):
     move_dir = os.path.join(base_dir, dapp_dir, "move")
     md_dir = os.path.join(base_dir, dapp_dir, "markdown")
-    
     if os.path.exists(move_dir):
-        move_documents.extend(SimpleDirectoryReader(move_dir).load_data())
+        print(f"Loading .move documents from {move_dir}...")
+        move_docs = SimpleDirectoryReader(move_dir).load_data()
+        print(f"Loaded {len(move_docs)} .move documents.")
+        move_documents.extend(move_docs)
     if os.path.exists(md_dir):
-        md_documents.extend(SimpleDirectoryReader(md_dir).load_data())
+        print(f"Loading .md documents from {md_dir}...")
+        md_docs = SimpleDirectoryReader(md_dir).load_data()
+        print(f"Loaded {len(md_docs)} .md documents.")
+        md_documents.extend(md_docs)
 
-# Create VectorStoreIndex for .move and .md files
-print("Creating VectorStoreIndex for .move and .md files...")
-move_index_file = "/workspaces/MoveGPT/training-files/move_index.pkl"
-md_index_file = "/workspaces/MoveGPT/training-files/md_index.pkl"
+# Create TreeIndex for each document
+print("Creating TreeIndex for .move and .md files...")
+storage_context = StorageContext.from_defaults(persist_dir=".")
 
-if os.path.exists(move_index_file):
-    print("Loading existing .move index from disk...")
-    move_index = VectorStoreIndex.load(move_index_file)
-else:
-    print("Creating new .move index...")
-    move_index = VectorStoreIndex.from_documents(move_documents)
-    move_index.save(move_index_file)
+move_indices = [TreeIndex.from_documents([doc], storage_context=storage_context) for doc in move_documents]
+md_indices = [TreeIndex.from_documents([doc], storage_context=storage_context) for doc in md_documents]
 
-if os.path.exists(md_index_file):
-    print("Loading existing .md index from disk...")
-    md_index = VectorStoreIndex.load(md_index_file)
-else:
-    print("Creating new .md index...")
-    md_index = VectorStoreIndex.from_documents(md_documents)
-    md_index.save(md_index_file)
-
-# Set summaries for the indices
-move_index_summary = "This index contains .move files for smart contracts on the Aptos blockchain."
-md_index_summary = "This index contains .md files that explain the technical documentation for the Move language."
+# Define summary text for each subindex
+move_index_summaries = ["This is a summary for move document {}".format(i) for i in range(len(move_documents))]
+md_index_summaries = ["This is a summary for md document {}".format(i) for i in range(len(md_documents))]
 
 # Create a ComposableGraph
 print("Creating ComposableGraph...")
 graph = ComposableGraph.from_indices(
-    SimpleKeywordTableIndex,
-    [move_index, md_index],
-    index_summaries=[move_index_summary, md_index_summary],
-    max_keywords_per_chunk=50,
+    TreeIndex,
+    move_indices + md_indices,
+    index_summaries=move_index_summaries + md_index_summaries,
+    storage_context=storage_context,
 )
 
 print("Done!")
+print(f"Total .move documents loaded: {len(move_documents)}")
+print(f"Total .md documents loaded: {len(md_documents)}")
+
+custom_query_engines = {
+    index.index_id: index.as_query_engine(
+        similarity_top_k=3,
+        response_mode="generation",
+    )
+}
+
+query_engine = graph.as_query_enginer(custom_query_engines=custom_query_engines)
+
+# Query the graph
+query = "write a move module called fibonacci that computes the nth fibonacci number where n is the argument to the fib function inside the fibonacci module. then write a separate move script that imports the fibonacci module and tests the fib function with the number 5?"
+results = query_engine.query(query)
+
+# Print the results
+print(type(result))
+print(result)
