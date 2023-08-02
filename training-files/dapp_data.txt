@@ -371,3 +371,4 @@ https://github.com/R4j4t-Singh/vNFT-Marketplace.git
 https://github.com/blockchainlover2019/coin-multi-sender.git
 https://github.com/YosephKS/move-cli-example.git
 https://github.com/pontem-network/liquidswap_v05.git
+https://github.com/aptos-labs/aptos-core
