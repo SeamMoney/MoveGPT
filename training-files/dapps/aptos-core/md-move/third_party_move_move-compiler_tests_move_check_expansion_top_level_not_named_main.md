@@ -1,0 +1,7 @@
+```rust
+script {
+fun foo() {
+}
+}
+
+```

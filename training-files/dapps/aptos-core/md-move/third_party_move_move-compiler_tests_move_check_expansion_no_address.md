@@ -1,0 +1,4 @@
+```rust
+module M {}
+
+```

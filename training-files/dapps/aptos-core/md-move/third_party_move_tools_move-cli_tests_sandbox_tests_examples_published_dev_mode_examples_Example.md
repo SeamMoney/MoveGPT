@@ -1,0 +1,5 @@
+```rust
+module Addr::Example {
+}
+
+```
