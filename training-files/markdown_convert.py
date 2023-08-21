@@ -1,4 +1,5 @@
 import os
+import shutil
 
 def convert_move_to_md(move_file_path, md_file_path):
     try:
@@ -19,17 +20,28 @@ def convert_move_to_md(move_file_path, md_file_path):
         print(f"Error processing {move_file_path}: {e}")
 
 def process_directory(directory):
+    # Define folder paths
     move_folder = os.path.join(directory, 'move')
     md_move_folder = os.path.join(directory, 'md-move')
+    markdown_folder = os.path.join(directory, 'markdown')
 
-    # Check if the move/ folder exists
-    if not os.path.exists(move_folder):
-        print(f"Skipping {directory}: move/ folder not found")
-        return
-
-    # Create the md-move/ folder if it doesn't exist
+    # Create folders if they don't exist
+    os.makedirs(move_folder, exist_ok=True)
     os.makedirs(md_move_folder, exist_ok=True)
+    os.makedirs(markdown_folder, exist_ok=True)
 
+    # Move all .move and .md files to their respective folders
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            file_path = os.path.join(root, file)
+            if file.endswith('.move'):
+                shutil.move(file_path, os.path.join(move_folder, file))
+            elif file.endswith('.md'):
+                shutil.move(file_path, os.path.join(markdown_folder, file))
+            else:
+                os.remove(file_path)  # Delete other files
+
+    # Convert .move files to .md as before
     for root, dirs, files in os.walk(move_folder):
         for file in files:
             if file.endswith('.move'):
@@ -42,4 +54,3 @@ start_directory = 'dapps'
 for subdir in os.listdir(start_directory):
     if os.path.isdir(os.path.join(start_directory, subdir)):
         process_directory(os.path.join(start_directory, subdir))
-
